@@ -1,4 +1,30 @@
-# Superpowers
+# Codex Superpowers
+
+This is a Codex-first fork of [obra/superpowers](https://github.com/obra/superpowers).
+It keeps the original discipline-focused workflow, but tunes the skills for
+OpenAI Codex usage:
+
+- Codex-native tool mapping (`update_plan`, `spawn_agent`, `wait_agent`,
+  `close_agent`, `apply_patch`, `exec_command`)
+- Codex-first `using-superpowers` entry skill
+- Cleaner skill `description` triggers that focus on when each skill should load
+- Updated subagent, code-review, and plan-tracking instructions for Codex
+
+See [CODEX_OPTIMIZATIONS.md](CODEX_OPTIMIZATIONS.md) for the optimization notes.
+
+## Codex Installation
+
+```bash
+git clone https://github.com/smallocean43658/codex-superpowers.git ~/.codex/superpowers
+mkdir -p ~/.agents/skills
+ln -s ~/.codex/superpowers/skills ~/.agents/skills/superpowers
+```
+
+Restart Codex after installing so it discovers the skills.
+
+---
+
+# Upstream Superpowers
 
 Superpowers is a complete software development workflow for your coding agents, built on top of a set of composable "skills" and some initial instructions that make sure your agent uses them.
 
@@ -67,7 +93,7 @@ or search for "superpowers" in the plugin marketplace.
 Tell Codex:
 
 ```
-Fetch and follow instructions from https://raw.githubusercontent.com/obra/superpowers/refs/heads/main/.codex/INSTALL.md
+Fetch and follow instructions from https://raw.githubusercontent.com/smallocean43658/codex-superpowers/refs/heads/main/.codex/INSTALL.md
 ```
 
 **Detailed docs:** [docs/README.codex.md](docs/README.codex.md)

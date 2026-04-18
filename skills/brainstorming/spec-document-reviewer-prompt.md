@@ -7,9 +7,12 @@ Use this template when dispatching a spec document reviewer subagent.
 **Dispatch after:** Spec document is written to docs/superpowers/specs/
 
 ```
-Task tool (general-purpose):
+Codex dispatch:
+  spawn_agent(agent_type="worker", message=<prompt below>)
+
+Prompt:
   description: "Review spec document"
-  prompt: |
+  body: |
     You are a spec document reviewer. Verify this spec is complete and ready for planning.
 
     **Spec to review:** [SPEC_FILE_PATH]

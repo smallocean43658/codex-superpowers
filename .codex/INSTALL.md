@@ -8,9 +8,9 @@ Enable superpowers skills in Codex via native skill discovery. Just clone and sy
 
 ## Installation
 
-1. **Clone the superpowers repository:**
+1. **Clone the Codex-optimized superpowers repository:**
    ```bash
-   git clone https://github.com/obra/superpowers.git ~/.codex/superpowers
+   git clone https://github.com/smallocean43658/codex-superpowers.git ~/.codex/superpowers
    ```
 
 2. **Create the skills symlink:**

@@ -1,17 +1,33 @@
 # Codex Tool Mapping
 
-Skills use Claude Code tool names. When you encounter these in a skill, use your platform equivalent:
+Use Codex's native tools directly. Older Superpowers text may mention Claude Code
+tool names; translate them with the tables below.
 
-| Skill references | Codex equivalent |
-|-----------------|------------------|
-| `Task` tool (dispatch subagent) | `spawn_agent` (see [Named agent dispatch](#named-agent-dispatch)) |
-| Multiple `Task` calls (parallel) | Multiple `spawn_agent` calls |
-| Task returns result | `wait` |
-| Task completes automatically | `close_agent` to free slot |
-| `TodoWrite` (task tracking) | `update_plan` |
-| `Skill` tool (invoke a skill) | Skills load natively — just follow the instructions |
-| `Read`, `Write`, `Edit` (files) | Use your native file tools |
-| `Bash` (run commands) | Use your native shell tools |
+## Codex Quick Reference
+
+| Goal | Codex tool | Minimal use |
+|------|------------|-------------|
+| Track checklist or plan state | `update_plan` | `update_plan({plan:[{step,status}]})` |
+| Start a subagent | `spawn_agent` | `spawn_agent({agent_type:"worker", message:"..."})` |
+| Start a read-only code explorer | `spawn_agent` | `spawn_agent({agent_type:"explorer", message:"..."})` |
+| Wait for subagent result | `wait_agent` | `wait_agent({targets:[agent_id], timeout_ms:30000})` |
+| Free a finished subagent slot | `close_agent` | `close_agent({target:agent_id})` |
+
+Plan statuses are `pending`, `in_progress`, and `completed`. Keep exactly one
+item `in_progress`.
+
+## Legacy Name Translation
+
+| Skill reference | Codex action |
+|-----------------|--------------|
+| `Task` tool | Use `spawn_agent`; pick `worker` for implementation/review or `explorer` for read-only codebase questions |
+| Multiple `Task` calls | Use multiple `spawn_agent` calls; in Codex, only delegate when the user explicitly allowed subagents or parallel agents |
+| Task returns result | Use `wait_agent` with the returned agent id |
+| Task is no longer needed | Use `close_agent` |
+| `TodoWrite` | Use `update_plan` |
+| `Skill` tool | Read the applicable `SKILL.md`, announce the skill, and follow it |
+| `Read`, `Write`, `Edit` | Use native file tools; use `apply_patch` for manual edits |
+| `Bash` | Use `exec_command` |
 
 ## Subagent dispatch requires multi-agent support
 
@@ -22,13 +38,14 @@ Add to your Codex config (`~/.codex/config.toml`):
 multi_agent = true
 ```
 
-This enables `spawn_agent`, `wait`, and `close_agent` for skills like `dispatching-parallel-agents` and `subagent-driven-development`.
+This enables `spawn_agent`, `wait_agent`, and `close_agent` for skills like `dispatching-parallel-agents` and `subagent-driven-development`.
 
 ## Named agent dispatch
 
 Claude Code skills reference named agent types like `superpowers:code-reviewer`.
-Codex does not have a named agent registry — `spawn_agent` creates generic agents
-from built-in roles (`default`, `explorer`, `worker`).
+Codex does not have a named agent registry. Convert named agents into a
+`spawn_agent(agent_type="worker", message=...)` call using the referenced prompt
+file.
 
 When a skill says to dispatch a named agent type:
 
@@ -37,11 +54,12 @@ When a skill says to dispatch a named agent type:
 2. Read the prompt content
 3. Fill any template placeholders (`{BASE_SHA}`, `{WHAT_WAS_IMPLEMENTED}`, etc.)
 4. Spawn a `worker` agent with the filled content as the `message`
+5. Wait with `wait_agent`; close with `close_agent` when the result is handled
 
 | Skill instruction | Codex equivalent |
 |-------------------|------------------|
-| `Task tool (superpowers:code-reviewer)` | `spawn_agent(agent_type="worker", message=...)` with `code-reviewer.md` content |
-| `Task tool (general-purpose)` with inline prompt | `spawn_agent(message=...)` with the same prompt |
+| `Task tool (superpowers:code-reviewer)` | Fill `code-reviewer.md`, then `spawn_agent(agent_type="worker", message=...)` |
+| `Task tool (general-purpose)` with inline prompt | `spawn_agent(message=...)` with the inline prompt |
 
 ### Message framing
 

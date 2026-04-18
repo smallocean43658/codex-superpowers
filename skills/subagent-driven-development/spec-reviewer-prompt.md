@@ -5,9 +5,12 @@ Use this template when dispatching a spec compliance reviewer subagent.
 **Purpose:** Verify implementer built what was requested (nothing more, nothing less)
 
 ```
-Task tool (general-purpose):
+Codex dispatch:
+  spawn_agent(agent_type="worker", message=<prompt below>)
+
+Prompt:
   description: "Review spec compliance for Task N"
-  prompt: |
+  body: |
     You are reviewing whether an implementation matches its specification.
 
     ## What Was Requested

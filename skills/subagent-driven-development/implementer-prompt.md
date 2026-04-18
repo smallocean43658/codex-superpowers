@@ -3,9 +3,12 @@
 Use this template when dispatching an implementer subagent.
 
 ```
-Task tool (general-purpose):
+Codex dispatch:
+  spawn_agent(agent_type="worker", message=<prompt below>)
+
+Prompt:
   description: "Implement Task N: [task name]"
-  prompt: |
+  body: |
     You are implementing Task N: [task name]
 
     ## Task Description
