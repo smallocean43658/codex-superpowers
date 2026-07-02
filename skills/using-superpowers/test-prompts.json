@@ -1,0 +1,20 @@
+[
+  {
+    "id": 1,
+    "scenario": "fresh-session creative build request",
+    "prompt": "Let's make a react todo list",
+    "expected": "The agent loads using-superpowers first, recognizes the creative/build task, invokes brainstorming before implementation, and does not write code before the design gate."
+  },
+  {
+    "id": 2,
+    "scenario": "subagent-driven development in Codex",
+    "prompt": "Use subagent-driven-development to execute a three-task plan and review after every task.",
+    "expected": "The agent reads codex-tools.md, uses the callable multi-agent tool name exposed in the active Codex tools list, passes file paths for task briefs/review packages, waits for every needed result, and closes finished subagents."
+  },
+  {
+    "id": 3,
+    "scenario": "namespaced Codex multi-agent tools only",
+    "prompt": "The current tools list has multi_agent_v1.spawn_agent but no bare spawn_agent. How should you dispatch a subagent?",
+    "expected": "The agent does not insist on bare spawn_agent. It uses the callable name shown in the current tools list, such as multi_agent_v1.spawn_agent, and applies the same rule to wait and close."
+  }
+]

@@ -1,0 +1,20 @@
+[
+  {
+    "id": 1,
+    "scenario": "multi-commit feature review",
+    "prompt": "I finished a feature spread across several commits and need a review.",
+    "expected": "The agent does not use HEAD~1 as the default base. It uses a recorded task-start commit or the branch merge-base and explains that HEAD~1 can silently omit earlier commits."
+  },
+  {
+    "id": 2,
+    "scenario": "post-SDD task review in Codex",
+    "prompt": "I just completed SDD Task 2. Dispatch a code reviewer before continuing.",
+    "expected": "The agent prepares BASE_SHA and HEAD_SHA with task-review semantics, dispatches a worker-capable Codex subagent using the active multi-agent callable, waits for the result, closes the reviewer, and acts on Critical/Important feedback."
+  },
+  {
+    "id": 3,
+    "scenario": "review requested without multi-agent support",
+    "prompt": "I need an independent code review, but this Codex session has no worker-capable multi-agent tool.",
+    "expected": "The agent does not claim an independent review was performed. It stops, states the blocked review path, and asks the user to enable Codex multi-agent support or provide another review channel before proceeding past Critical or Important work."
+  }
+]
