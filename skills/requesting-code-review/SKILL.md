@@ -36,11 +36,17 @@ multi-commit work, `HEAD~1` silently drops earlier commits from review.
 
 **2. Dispatch code reviewer subagent:**
 
-Dispatch a `general-purpose` subagent, filling the template at [code-reviewer.md](code-reviewer.md)
+Dispatch a worker-capable reviewer subagent, filling the template at
+[code-reviewer.md](code-reviewer.md).
 
 In Codex, use the worker-capable multi-agent tool exposed in the active session
 (see [codex-tools.md](../using-superpowers/references/codex-tools.md)). Wait for
 the reviewer result and close the finished subagent after handling it.
+
+If no worker-capable multi-agent tool is available, do not claim independent
+review was performed. Stop and tell your human partner which review path is
+blocked. Ask them to enable Codex multi-agent support or provide another review
+channel before proceeding past Critical or Important work.
 
 **Placeholders:**
 - `{DESCRIPTION}` - Brief summary of what you built
