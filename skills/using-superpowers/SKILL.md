@@ -51,11 +51,12 @@ These thoughts mean STOP—you're rationalizing:
 
 ## Platform Adaptation
 
-If your harness appears here, read its reference file for special instructions:
+This checkout is Codex-first. In Codex, skills are discovered from disk, so read
+the applicable `SKILL.md`, announce the skill, and follow it directly.
 
-- Codex: `references/codex-tools.md`
-- Pi: `references/pi-tools.md`
-- Antigravity: `references/antigravity-tools.md`
+Read `references/codex-tools.md` for Codex-specific tool mapping. Other
+upstream harness references may exist in this directory, but they are not the
+active path for this fork.
 
 ## User Instructions
 

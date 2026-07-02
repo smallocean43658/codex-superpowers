@@ -64,7 +64,11 @@ Only proceed to Step 1b if you have no native worktree tool available.
 
 Follow this priority order. Explicit user preference always beats observed filesystem state.
 
-1. **Check your instructions for a declared worktree directory preference.** If the user has already specified one, use it without asking.
+1. **Check your instructions for a declared worktree directory preference.** In Codex projects, check `AGENTS.md` first, then `CLAUDE.md` if present:
+   ```bash
+   grep -i "worktree.*director" AGENTS.md CLAUDE.md 2>/dev/null
+   ```
+   If the user has already specified one, use it without asking.
 
 2. **Check for an existing project-local worktree directory:**
    ```bash

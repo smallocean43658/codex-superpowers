@@ -25,13 +25,22 @@ Dispatch a code reviewer subagent to catch issues before they cascade. The revie
 
 **1. Get git SHAs:**
 ```bash
-BASE_SHA=$(git rev-parse HEAD~1)  # or origin/main
+# For task review, use the commit recorded before the task started.
+# For whole-branch review, use the branch merge-base.
+BASE_SHA=$(git merge-base main HEAD 2>/dev/null || git merge-base master HEAD)
 HEAD_SHA=$(git rev-parse HEAD)
 ```
+
+Do not use `HEAD~1` unless you are certain the work is exactly one commit. For
+multi-commit work, `HEAD~1` silently drops earlier commits from review.
 
 **2. Dispatch code reviewer subagent:**
 
 Dispatch a `general-purpose` subagent, filling the template at [code-reviewer.md](code-reviewer.md)
+
+In Codex, use the worker-capable multi-agent tool exposed in the active session
+(see [codex-tools.md](../using-superpowers/references/codex-tools.md)). Wait for
+the reviewer result and close the finished subagent after handling it.
 
 **Placeholders:**
 - `{DESCRIPTION}` - Brief summary of what you built
@@ -52,10 +61,10 @@ Dispatch a `general-purpose` subagent, filling the template at [code-reviewer.md
 
 You: Let me request code review before proceeding.
 
-BASE_SHA=$(git log --oneline | grep "Task 1" | head -1 | awk '{print $1}')
+BASE_SHA=<commit recorded before Task 2 started>
 HEAD_SHA=$(git rev-parse HEAD)
 
-[Dispatch code reviewer subagent]
+[Dispatch code reviewer subagent; in Codex, use the active worker subagent tool]
   DESCRIPTION: Added verifyIndex() and repairIndex() with 4 issue types
   PLAN_OR_REQUIREMENTS: Task 2 from docs/superpowers/plans/deployment-plan.md
   BASE_SHA: a7981ec

@@ -1,7 +1,7 @@
 {
-  "name": "superpowers-dev",
+  "name": "codex-superpowers-dev",
   "interface": {
-    "displayName": "Superpowers Dev"
+    "displayName": "Codex Superpowers Dev"
   },
   "plugins": [
     {

@@ -22,10 +22,10 @@ def assert_equal(actual, expected, label):
     if actual != expected:
         raise AssertionError(f"{label}: expected {expected!r}, got {actual!r}")
 
-assert_equal(marketplace.get("name"), "superpowers-dev", "marketplace name")
+assert_equal(marketplace.get("name"), "codex-superpowers-dev", "marketplace name")
 assert_equal(
     marketplace.get("interface", {}).get("displayName"),
-    "Superpowers Dev",
+    "Codex Superpowers Dev",
     "marketplace display name",
 )
 
@@ -51,6 +51,34 @@ if not plugin_manifest.exists():
 
 manifest = json.loads(plugin_manifest.read_text(encoding="utf-8"))
 assert_equal(manifest.get("name"), plugin.get("name"), "plugin manifest name")
+assert_equal(
+    manifest.get("homepage"),
+    "https://github.com/smallocean43658/codex-superpowers",
+    "plugin manifest homepage",
+)
+assert_equal(
+    manifest.get("repository"),
+    "https://github.com/smallocean43658/codex-superpowers",
+    "plugin manifest repository",
+)
+assert_equal(
+    manifest.get("interface", {}).get("displayName"),
+    "Codex Superpowers",
+    "plugin manifest display name",
+)
+assert_equal(
+    manifest.get("interface", {}).get("websiteURL"),
+    "https://github.com/smallocean43658/codex-superpowers",
+    "plugin manifest website URL",
+)
+for field in [
+    manifest.get("description", ""),
+    manifest.get("interface", {}).get("shortDescription", ""),
+    manifest.get("interface", {}).get("longDescription", ""),
+]:
+    if "Codex" not in field:
+        raise AssertionError(f"manifest description field should identify Codex fork: {field!r}")
+
 assert_equal(
     manifest.get("hooks"),
     None,
