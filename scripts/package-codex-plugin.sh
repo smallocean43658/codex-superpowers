@@ -260,11 +260,17 @@ missing_metadata=0
 while IFS= read -r skill_dir; do
   skill_name="${skill_dir##*/}"
   metadata_file="$METADATA_ROOT/skills/$skill_name/agents/openai.yaml"
+  source_metadata_file="$skill_dir/agents/openai.yaml"
 
   if [[ ! -f "$metadata_file" ]]; then
-    echo "Missing OpenAI agent metadata for skill: $skill_name" >&2
-    missing_metadata=1
-    continue
+    if [[ -f "$source_metadata_file" ]]; then
+      echo "Using source OpenAI agent metadata for new skill: $skill_name" >&2
+      continue
+    else
+      echo "Missing OpenAI agent metadata for skill: $skill_name" >&2
+      missing_metadata=1
+      continue
+    fi
   fi
 
   mkdir -p "$skill_dir/agents"

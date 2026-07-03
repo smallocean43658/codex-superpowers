@@ -1,0 +1,539 @@
+#!/usr/bin/env python3
+"""Create and validate run ledgers for orchestrated multi-agent analysis."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+from uuid import uuid4
+
+
+VERSION = 1
+EXPECTED_AGENTS_PER_ROUND = 6
+ROUND_CAP = 4
+REVIEW_ROUND_ONE_LENSES = {
+    "A1": "First Principles",
+    "A2": "Occam's Razor",
+    "A3": "Bounded Bayesian",
+    "A4": "Expected Cost Optimality",
+    "A5": "Adversarial Review",
+    "A6": "Execution Friction",
+}
+DIVERGENT_ROUND_ONE_LENSES = {
+    "S1": "User Behavior & Adoption",
+    "S2": "Workflow & Operational Reality",
+    "S3": "System Mechanics & Dependencies",
+    "S4": "Failure, Abuse & Recovery",
+    "S5": "Economics, Time & Opportunity Cost",
+    "S6": "Wildcard Non-Obvious Angle",
+}
+DIVERGENT_WILDCARD_KEYS = ["wildcard_family", "why_material", "why_not_redundant"]
+
+
+def now_iso() -> str:
+    return datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
+
+
+def slugify(value: str, fallback: str = "target") -> str:
+    slug = re.sub(r"[^a-zA-Z0-9]+", "-", value.strip().lower())
+    slug = re.sub(r"-{2,}", "-", slug).strip("-")
+    if not slug:
+        slug = fallback
+    return slug[:48].strip("-") or fallback
+
+
+def write_json(path: Path, payload: dict[str, Any]) -> None:
+    path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
+def read_json(path: Path) -> Any:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        raise SystemExit(f"missing JSON file: {path}") from None
+    except json.JSONDecodeError as exc:
+        raise SystemExit(f"invalid JSON in {path}: {exc}") from None
+
+
+def append_ledger(run_dir: Path, message: str) -> None:
+    ledger = run_dir / "ledger.md"
+    with ledger.open("a", encoding="utf-8") as handle:
+        handle.write(f"- {now_iso()} - {message}\n")
+
+
+def create_unique_run_dir(root: Path, mode: str, title: str) -> tuple[str, Path]:
+    stamp = datetime.now().strftime("%Y-%m-%d-%H%M")
+    base = f"{stamp}-{mode}-{slugify(title)}-{uuid4().hex[:6]}"
+
+    for index in range(1000):
+        run_id = base if index == 0 else f"{base}-{index + 1}"
+        candidate = root / run_id
+        try:
+            candidate.mkdir(parents=False, exist_ok=False)
+            return run_id, candidate
+        except FileExistsError:
+            continue
+
+    raise SystemExit(f"could not allocate unique run directory under {root}")
+
+
+def render_brief(args: argparse.Namespace, run_id: str) -> str:
+    constraints = args.constraint or []
+    constraint_lines = "\n".join(f"- {item}" for item in constraints) if constraints else "- None recorded"
+    source_lines = "\n".join(f"- {item}" for item in args.source) if args.source else "- None recorded"
+    return f"""# Multi-Agent Analysis Brief
+
+Run ID: {run_id}
+Mode: {args.mode}
+Target: {args.target}
+Objective: {args.objective}
+Title: {args.title or args.target}
+Created: {now_iso()}
+CWD: {args.cwd or ""}
+
+## Constraints
+
+{constraint_lines}
+
+## Source Files
+
+{source_lines}
+
+## Notes
+
+Add any additional context needed by all six subagents before dispatching the round.
+"""
+
+
+def command_init(args: argparse.Namespace) -> int:
+    root = Path(args.root)
+    root.mkdir(parents=True, exist_ok=True)
+    (root / ".gitignore").write_text("*\n!.gitignore\n", encoding="utf-8")
+
+    title = args.title or args.target
+    run_id, run_dir = create_unique_run_dir(root, args.mode, title)
+
+    state = {
+        "version": VERSION,
+        "run_id": run_id,
+        "mode": args.mode,
+        "status": "initialized",
+        "target": args.target,
+        "objective": args.objective,
+        "title": title,
+        "created_at": now_iso(),
+        "root": str(root),
+        "run_dir": str(run_dir),
+        "cwd": args.cwd or "",
+        "tooling": {
+            "spawn": args.spawn_tool,
+            "wait": args.wait_tool,
+            "close": args.close_tool,
+        },
+        "expected_agents_per_round": EXPECTED_AGENTS_PER_ROUND,
+        "round_cap": ROUND_CAP,
+        "current_round": 1,
+        "last_finalized_round": 0,
+        "next_action": "prepare_round",
+    }
+
+    (run_dir / "brief.md").write_text(render_brief(args, run_id), encoding="utf-8")
+    (run_dir / "ledger.md").write_text(
+        f"# Multi-Agent Analysis Ledger\n\nRun ID: {run_id}\n\n"
+        f"- {now_iso()} - initialized run record\n",
+        encoding="utf-8",
+    )
+    write_json(run_dir / "state.json", state)
+
+    print(run_dir)
+    return 0
+
+
+def require_text(value: Any, key: str, index: int) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise SystemExit(f"assignment {index} must include non-empty string {key!r}")
+    return value
+
+
+def validate_round_one_lenses(assignments: list[dict[str, Any]], mode: str) -> None:
+    expected = REVIEW_ROUND_ONE_LENSES if mode == "review" else DIVERGENT_ROUND_ONE_LENSES
+    expected_slots = list(expected)
+    actual_slots = [item["slot"] for item in assignments]
+    if actual_slots != expected_slots:
+        raise SystemExit(
+            f"{mode} round 1 slots must be exactly {', '.join(expected_slots)} in order"
+        )
+    for item in assignments:
+        expected_lens = expected[item["slot"]]
+        if item["lens"] != expected_lens:
+            raise SystemExit(
+                f"{item['slot']} lens must be {expected_lens!r}, got {item['lens']!r}"
+            )
+    if mode == "divergent-analysis":
+        s6 = assignments[5]
+        for key in DIVERGENT_WILDCARD_KEYS:
+            require_text(s6.get(key), key, 6)
+
+
+def validate_assignments(raw: Any, mode: str, round_number: int) -> list[dict[str, Any]]:
+    if not isinstance(raw, list):
+        raise SystemExit("assignments JSON must be an array")
+    assignments = raw
+    if len(assignments) != EXPECTED_AGENTS_PER_ROUND:
+        raise SystemExit("assignments JSON must contain exactly six entries")
+
+    validated: list[dict[str, Any]] = []
+    for index, item in enumerate(assignments, start=1):
+        if not isinstance(item, dict):
+            raise SystemExit(f"assignment {index} must be an object")
+        validated_item = dict(item)
+        for key in ["slot", "lens", "question"]:
+            validated_item[key] = require_text(validated_item.get(key), key, index)
+        validated.append(validated_item)
+    slots = [item["slot"] for item in validated]
+    if len(set(slots)) != len(slots):
+        raise SystemExit("assignments must use six unique slot labels")
+    if round_number == 1:
+        validate_round_one_lenses(validated, mode)
+    return validated
+
+
+def markdown_escape(value: Any) -> str:
+    return str(value).replace("|", "\\|").replace("\n", " ")
+
+
+def render_round_markdown(round_doc: dict[str, Any]) -> str:
+    rows = [
+        "| Slot | Lens | Question | Agent ID | Result | Close |",
+        "|---|---|---|---|---|---|",
+    ]
+    for item in round_doc["assignments"]:
+        rows.append(
+            "| {slot} | {lens} | {question} | {agent_id} | {result_status} | {close_status} |".format(
+                slot=markdown_escape(item["slot"]),
+                lens=markdown_escape(item["lens"]),
+                question=markdown_escape(item["question"]),
+                agent_id=markdown_escape(item.get("agent_id") or ""),
+                result_status=markdown_escape(item.get("result_status") or "pending"),
+                close_status=markdown_escape(item.get("close_status") or "pending"),
+            )
+        )
+
+    return f"""# Round {round_doc["round"]:02d}
+
+Status: {round_doc["status"]}
+Created: {round_doc["created_at"]}
+
+## Assignments
+
+{chr(10).join(rows)}
+
+## Results
+
+Record each worker result here before synthesis.
+
+## Synthesis
+
+Complete after all six usable results are recorded, or document why the run is blocked.
+"""
+
+
+def load_state(run_dir: Path) -> dict[str, Any]:
+    state = read_json(run_dir / "state.json")
+    if not isinstance(state, dict):
+        raise SystemExit("state.json must contain an object")
+    return state
+
+
+def write_round(run_dir: Path, round_doc: dict[str, Any]) -> None:
+    round_number = int(round_doc["round"])
+    round_stem = f"round-{round_number:02d}"
+    write_json(run_dir / f"{round_stem}.json", round_doc)
+    (run_dir / f"{round_stem}.md").write_text(render_round_markdown(round_doc), encoding="utf-8")
+
+
+def load_round(run_dir: Path, round_number: int) -> dict[str, Any]:
+    round_doc = read_json(run_dir / f"round-{round_number:02d}.json")
+    if not isinstance(round_doc, dict):
+        raise SystemExit("round JSON must contain an object")
+    return round_doc
+
+
+def find_assignment(round_doc: dict[str, Any], slot: str) -> dict[str, Any]:
+    for assignment in round_doc.get("assignments", []):
+        if assignment.get("slot") == slot:
+            return assignment
+    raise SystemExit(f"round-{round_doc.get('round', 0):02d} has no assignment slot {slot!r}")
+
+
+def round_counts(round_doc: dict[str, Any]) -> dict[str, int]:
+    assignments = round_doc.get("assignments", [])
+    return {
+        "assignments": len(assignments),
+        "spawned": sum(1 for item in assignments if item.get("spawn_status") not in (None, "", "pending")),
+        "results": sum(1 for item in assignments if item.get("result_status") not in (None, "", "pending")),
+        "closed": sum(1 for item in assignments if item.get("close_status") not in (None, "", "pending")),
+    }
+
+
+def update_state(run_dir: Path, **updates: Any) -> dict[str, Any]:
+    state = load_state(run_dir)
+    state.update(updates)
+    state["updated_at"] = now_iso()
+    write_json(run_dir / "state.json", state)
+    return state
+
+
+def command_prepare_round(args: argparse.Namespace) -> int:
+    run_dir = Path(args.run_dir)
+    state_path = run_dir / "state.json"
+    if not run_dir.is_dir():
+        raise SystemExit(f"run directory does not exist: {run_dir}")
+
+    state = load_state(run_dir)
+
+    round_number = args.round
+    round_cap = int(state.get("round_cap", ROUND_CAP))
+    if round_number < 1:
+        raise SystemExit("round must be at least 1")
+    if round_number > round_cap:
+        raise SystemExit(f"round {round_number} exceeds round cap {round_cap}")
+    if round_number >= 3 and not args.user_approved:
+        raise SystemExit(f"round {round_number} requires user approval")
+
+    round_stem = f"round-{round_number:02d}"
+    round_json = run_dir / f"{round_stem}.json"
+    round_markdown = run_dir / f"{round_stem}.md"
+    if round_json.exists() or round_markdown.exists():
+        raise SystemExit(f"{round_stem} already exists; refusing to overwrite")
+
+    last_finalized = int(state.get("last_finalized_round", 0))
+    if round_number == 1:
+        if last_finalized != 0:
+            raise SystemExit("round 1 cannot be prepared after a finalized round")
+    elif round_number != last_finalized + 1:
+        raise SystemExit(f"round {round_number} requires round {round_number - 1} finalized first")
+
+    assignments = validate_assignments(
+        read_json(Path(args.assignments)),
+        str(state.get("mode")),
+        round_number,
+    )
+    created_at = now_iso()
+    round_doc = {
+        "version": VERSION,
+        "run_id": state.get("run_id"),
+        "mode": state.get("mode"),
+        "round": round_number,
+        "status": "planned",
+        "created_at": created_at,
+        "expected_agents": EXPECTED_AGENTS_PER_ROUND,
+        "assignments": [],
+        "synthesis": {
+            "convergence": [],
+            "disagreement": [],
+            "critical_disagreements": [],
+            "cannot_verify": [],
+            "high_impact_low_evidence": [],
+            "action_list": [],
+            "expected_value_of_another_round": "",
+            "next_round_decision": "",
+            "stop_reason": "",
+            "next_round_question": "",
+        },
+    }
+
+    for item in assignments:
+        planned = dict(item)
+        planned.setdefault("agent_id", None)
+        planned.setdefault("spawn_tool", state.get("tooling", {}).get("spawn"))
+        planned.setdefault("wait_tool", state.get("tooling", {}).get("wait"))
+        planned.setdefault("close_tool", state.get("tooling", {}).get("close"))
+        planned.setdefault("spawn_status", "pending")
+        planned.setdefault("result_status", "pending")
+        planned.setdefault("close_status", "pending")
+        planned.setdefault("result_summary", "")
+        round_doc["assignments"].append(planned)
+
+    write_round(run_dir, round_doc)
+
+    state["status"] = "round_planned"
+    state["current_round"] = round_number
+    state["next_action"] = "dispatch_round"
+    state["updated_at"] = created_at
+    write_json(state_path, state)
+    append_ledger(run_dir, f"prepared {round_stem} with exactly six assignments")
+
+    print(run_dir / f"{round_stem}.json")
+    return 0
+
+
+def command_record(args: argparse.Namespace, event: str) -> int:
+    run_dir = Path(args.run_dir)
+    round_doc = load_round(run_dir, args.round)
+    assignment = find_assignment(round_doc, args.slot)
+    timestamp = now_iso()
+
+    if event == "spawn":
+        if args.agent_id:
+            assignment["agent_id"] = args.agent_id
+        assignment["spawn_status"] = args.status
+        assignment["spawn_recorded_at"] = timestamp
+    elif event == "result":
+        assignment["result_status"] = args.status
+        assignment["result_summary"] = args.summary or assignment.get("result_summary", "")
+        assignment["result_recorded_at"] = timestamp
+    elif event == "close":
+        assignment["close_status"] = args.status
+        assignment["close_recorded_at"] = timestamp
+    else:
+        raise SystemExit(f"unknown record event: {event}")
+
+    round_doc.setdefault("events", []).append(
+        {
+            "event": event,
+            "slot": args.slot,
+            "status": args.status,
+            "agent_id": assignment.get("agent_id"),
+            "summary": args.summary or "",
+            "recorded_at": timestamp,
+        }
+    )
+    write_round(run_dir, round_doc)
+
+    counts = round_counts(round_doc)
+    if counts["results"] == EXPECTED_AGENTS_PER_ROUND and counts["closed"] == EXPECTED_AGENTS_PER_ROUND:
+        next_action = "synthesize_round"
+    elif counts["results"] == EXPECTED_AGENTS_PER_ROUND:
+        next_action = "close_workers"
+    else:
+        next_action = "continue_lifecycle"
+    update_state(
+        run_dir,
+        status="round_in_progress",
+        current_round=args.round,
+        next_action=next_action,
+    )
+    append_ledger(
+        run_dir,
+        f"record-{event} round-{args.round:02d} {args.slot} status={args.status}"
+        + (f" agent_id={assignment.get('agent_id')}" if assignment.get("agent_id") else ""),
+    )
+    print(run_dir / f"round-{args.round:02d}.json")
+    return 0
+
+
+def command_finalize_round(args: argparse.Namespace) -> int:
+    run_dir = Path(args.run_dir)
+    round_doc = load_round(run_dir, args.round)
+    round_doc["status"] = "finalized"
+    round_doc.setdefault("synthesis", {})["next_round_decision"] = args.decision
+    if args.decision == "stop":
+        round_doc["synthesis"]["stop_reason"] = args.summary
+        next_action = "complete"
+        status = "complete"
+    elif args.decision == "continue_round_2":
+        round_doc["synthesis"]["next_round_question"] = args.summary
+        next_action = "prepare_round"
+        status = "round_finalized"
+    else:
+        round_doc["synthesis"]["next_round_question"] = args.summary
+        next_action = "ask_user"
+        status = "awaiting_user"
+    round_doc["finalized_at"] = now_iso()
+    write_round(run_dir, round_doc)
+    update_state(
+        run_dir,
+        status=status,
+        last_finalized_round=args.round,
+        current_round=args.round,
+        next_action=next_action,
+    )
+    append_ledger(run_dir, f"finalized round-{args.round:02d} decision={args.decision}")
+    print(run_dir / "state.json")
+    return 0
+
+
+def command_status(args: argparse.Namespace) -> int:
+    run_dir = Path(args.run_dir)
+    state = load_state(run_dir)
+    rounds: dict[str, Any] = {}
+    for round_path in sorted(run_dir.glob("round-*.json")):
+        round_doc = read_json(round_path)
+        if isinstance(round_doc, dict):
+            rounds[round_path.stem] = {
+                "status": round_doc.get("status"),
+                **round_counts(round_doc),
+            }
+    print(json.dumps({"run_dir": str(run_dir), **state, "rounds": rounds}, indent=2, ensure_ascii=False))
+    return 0
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Create and validate ledgers for orchestrated multi-agent analysis.",
+    )
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    init = subparsers.add_parser("init", help="Create a new run record.")
+    init.add_argument("--root", required=True, help="Run record root directory.")
+    init.add_argument("--mode", required=True, choices=["review", "divergent-analysis"])
+    init.add_argument("--target", required=True)
+    init.add_argument("--objective", required=True)
+    init.add_argument("--spawn-tool", required=True)
+    init.add_argument("--wait-tool", required=True)
+    init.add_argument("--close-tool", required=True)
+    init.add_argument("--cwd", default="")
+    init.add_argument("--title", default="")
+    init.add_argument("--constraint", action="append", default=[])
+    init.add_argument("--source", action="append", default=[])
+    init.set_defaults(func=command_init)
+
+    prepare = subparsers.add_parser("prepare-round", help="Validate assignments and create round files.")
+    prepare.add_argument("--run-dir", required=True)
+    prepare.add_argument("--round", required=True, type=int)
+    prepare.add_argument("--assignments", required=True)
+    prepare.add_argument("--user-approved", action="store_true")
+    prepare.set_defaults(func=command_prepare_round)
+
+    for name, event in [
+        ("record-spawn", "spawn"),
+        ("record-result", "result"),
+        ("record-close", "close"),
+    ]:
+        record = subparsers.add_parser(name, help=f"Record a {event} lifecycle event.")
+        record.add_argument("--run-dir", required=True)
+        record.add_argument("--round", required=True, type=int)
+        record.add_argument("--slot", required=True)
+        record.add_argument("--status", required=True)
+        record.add_argument("--agent-id", default="")
+        record.add_argument("--summary", default="")
+        record.set_defaults(func=lambda args, event=event: command_record(args, event))
+
+    finalize = subparsers.add_parser("finalize-round", help="Mark synthesis decision for a round.")
+    finalize.add_argument("--run-dir", required=True)
+    finalize.add_argument("--round", required=True, type=int)
+    finalize.add_argument("--decision", required=True, choices=["stop", "continue_round_2", "ask_user"])
+    finalize.add_argument("--summary", required=True)
+    finalize.set_defaults(func=command_finalize_round)
+
+    status = subparsers.add_parser("status", help="Print resumable run status as JSON.")
+    status.add_argument("--run-dir", required=True)
+    status.set_defaults(func=command_status)
+
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    return args.func(args)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
