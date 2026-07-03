@@ -1,14 +1,14 @@
 # Codex Optimization Notes
 
 This repository is a Codex-first fork of `obra/superpowers`. The current fork is
-built on upstream `v6.1.0` and adds a thin Codex overlay instead of carrying a
+built on upstream `v6.1.1` and adds a thin Codex overlay instead of carrying a
 large divergent copy of every skill.
 
 ## What Changed
 
-### v6.1.0 Baseline
+### v6.1.1 Baseline
 
-The fork intentionally keeps the upstream `v6.1.0` behavior for the core
+The fork intentionally keeps the upstream `v6.1.1` behavior for the core
 workflow:
 
 - subagent-driven development uses one task reviewer per task and one broad
@@ -21,6 +21,9 @@ workflow:
   the harness
 - the brainstorming visual companion includes the upstream security and
   lifecycle hardening
+- the Codex plugin manifest declares `hooks: {}` to suppress accidental
+  SessionStart hook auto-discovery
+- the upstream Codex portal packaging script and tests are present
 
 ### Codex Overlay
 
@@ -59,7 +62,7 @@ skill discovery. The same intent remains:
 Do not restore the old `v5.0.6` prompt structure directly.
 
 - Do not restore `skills/subagent-driven-development/spec-reviewer-prompt.md`
-  or `code-quality-reviewer-prompt.md`; upstream `v6.1.0` replaced them with
+  or `code-quality-reviewer-prompt.md`; upstream `v6.x` replaced them with
   `task-reviewer-prompt.md`
 - Do not re-expand the compressed `using-superpowers` bootstrap unless a Codex
   run proves the short form is insufficient
@@ -96,6 +99,7 @@ When updating from upstream:
    ```bash
    bash tests/codex/test-codex-fork-overlay.sh
    bash tests/codex/test-marketplace-manifest.sh
+   bash tests/codex/test-package-codex-plugin.sh
    git diff --check
    ```
 5. Smoke-test a fresh Codex session against the symlink install path.
@@ -107,6 +111,7 @@ Run these checks before publishing or relying on a new fork update:
 ```bash
 bash tests/codex/test-codex-fork-overlay.sh
 bash tests/codex/test-marketplace-manifest.sh
+bash tests/codex/test-package-codex-plugin.sh
 git diff --check
 ```
 

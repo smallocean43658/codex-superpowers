@@ -6,7 +6,7 @@ Codex Superpowers is a Codex-first fork of
 The upstream project provides the software-development discipline: skill
 selection, brainstorming, planning, TDD, systematic debugging, subagent-driven
 development, code review, and branch finishing. This fork keeps that discipline
-on the upstream `v6.1.0` skill base, then adds a Codex overlay so the active
+on the upstream `v6.1.1` skill base, then adds a Codex overlay so the active
 instructions match Codex's local skill discovery and tools.
 
 ## Relationship To Upstream
@@ -15,7 +15,7 @@ This repository is not the original Superpowers project. It is a public fork
 optimized for Codex users.
 
 - Original project: <https://github.com/obra/superpowers>
-- Current upstream baseline: `v6.1.0`
+- Current upstream baseline: `v6.1.1`
 - Fork repository: <https://github.com/smallocean43658/codex-superpowers>
 - Upstream author and project credit belong to the Superpowers maintainers
 - This fork changes Codex-facing skill instructions and documentation
@@ -109,7 +109,7 @@ Codex session starts.
 
 ## What Is Codex-Specific
 
-This fork keeps upstream `v6.1.0` skill behavior, including the newer
+This fork keeps upstream `v6.1.1` skill behavior, including the newer
 subagent-driven development file handoffs, durable progress ledger, worktree
 detection, and hardened brainstorming visual companion.
 

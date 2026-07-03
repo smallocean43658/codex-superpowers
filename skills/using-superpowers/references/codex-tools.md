@@ -56,7 +56,7 @@ When using subagents:
 
 ## Subagent-Driven Development In Codex
 
-Upstream `v6.1.0` SDD intentionally moves bulky artifacts through files. Keep
+Upstream `v6.1.1` SDD intentionally moves bulky artifacts through files. Keep
 that design in Codex.
 
 - Generate task briefs with `skills/subagent-driven-development/scripts/task-brief`

@@ -1,6 +1,6 @@
 {
   "name": "superpowers",
-  "version": "6.1.0",
+  "version": "6.1.1",
   "description": "A Codex-first Superpowers fork: planning, TDD, debugging, review, and delivery workflows with Codex-native tool guidance.",
   "author": {
     "name": "Jesse Vincent",
@@ -21,12 +21,13 @@
     "workflow"
   ],
   "skills": "./skills/",
+  "hooks": {},
   "interface": {
     "displayName": "Codex Superpowers",
     "shortDescription": "Codex-first planning, TDD, debugging, and delivery workflows",
     "longDescription": "Use Codex Superpowers to guide agent work through brainstorming, implementation planning, test-driven development, systematic debugging, subagent execution, code review, and finish-the-branch workflows with Codex-native tool mapping.",
     "developerName": "Jesse Vincent",
-    "category": "Coding",
+    "category": "Developer Tools",
     "capabilities": [
       "Interactive",
       "Read",

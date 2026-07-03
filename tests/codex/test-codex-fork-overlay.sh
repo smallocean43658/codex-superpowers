@@ -45,11 +45,12 @@ for banned in [
         raise AssertionError(f"README should be Codex-specific; found {banned!r}")
 
 notes = read("CODEX_OPTIMIZATIONS.md")
-require(notes, "v6.1.0", "optimization notes baseline")
+require(notes, "v6.1.1", "optimization notes baseline")
 require(notes, "Codex overlay", "optimization notes overlay")
 require(notes, "Do not restore", "optimization notes obsolete prompt guidance")
 require(notes, "Allowed Overlay Surface", "optimization notes overlay policy")
 require(notes, "Maintenance Flow", "optimization notes maintenance flow")
+require(notes, "test-package-codex-plugin.sh", "optimization notes package verification")
 
 codex_tools = read("skills/using-superpowers/references/codex-tools.md")
 for needle in [
