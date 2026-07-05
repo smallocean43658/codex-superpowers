@@ -65,12 +65,16 @@ Each agent gets:
 
 ### 3. Dispatch in Parallel
 
+Issue all three subagent dispatches in the same response — they run in parallel:
+
 ```text
-spawn_agent(agent_type="worker", message="Fix agent-tool-abort.test.ts failures")
-spawn_agent(agent_type="worker", message="Fix batch-completion-behavior.test.ts failures")
-spawn_agent(agent_type="worker", message="Fix tool-approval-race-conditions.test.ts failures")
-# Wait with wait_agent; close each agent after integrating its result
+Subagent (general-purpose): "Fix agent-tool-abort.test.ts failures"
+Subagent (general-purpose): "Fix batch-completion-behavior.test.ts failures"
+Subagent (general-purpose): "Fix tool-approval-race-conditions.test.ts failures"
+# All three run concurrently.
 ```
+
+Multiple dispatch calls in one response = parallel execution. One per response = sequential.
 
 ### 4. Review and Integrate
 

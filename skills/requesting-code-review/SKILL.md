@@ -1,11 +1,11 @@
 ---
 name: requesting-code-review
-description: Use when completing a task, finishing a major change, preparing to merge, or needing independent review of implementation work
+description: Use when completing tasks, implementing major features, or before merging to verify work meets requirements
 ---
 
 # Requesting Code Review
 
-Dispatch a code-reviewer subagent to catch issues before they cascade. In Codex, read `code-reviewer.md`, fill the placeholders, then use `spawn_agent(agent_type="worker", message=...)`. The reviewer gets precisely crafted context for evaluation — never your session's history. This keeps the reviewer focused on the work product, not your thought process, and preserves your own context for continued work.
+Dispatch a code reviewer subagent to catch issues before they cascade. The reviewer gets precisely crafted context for evaluation — never your session's history. This keeps the reviewer focused on the work product, not your thought process, and preserves your own context for continued work.
 
 **Core principle:** Review early, review often.
 
@@ -25,20 +25,34 @@ Dispatch a code-reviewer subagent to catch issues before they cascade. In Codex,
 
 **1. Get git SHAs:**
 ```bash
-BASE_SHA=$(git rev-parse HEAD~1)  # or origin/main
+# For task review, use the commit recorded before the task started.
+# For whole-branch review, use the branch merge-base.
+BASE_SHA=$(git merge-base main HEAD 2>/dev/null || git merge-base master HEAD)
 HEAD_SHA=$(git rev-parse HEAD)
 ```
 
-**2. Dispatch code-reviewer subagent:**
+Do not use `HEAD~1` unless you are certain the work is exactly one commit. For
+multi-commit work, `HEAD~1` silently drops earlier commits from review.
 
-Read `code-reviewer.md`, fill the placeholders below, then dispatch it with `spawn_agent(agent_type="worker", message=...)`. Use `wait_agent` for the result and `close_agent` after the review is handled.
+**2. Dispatch code reviewer subagent:**
+
+Dispatch a worker-capable reviewer subagent, filling the template at
+[code-reviewer.md](code-reviewer.md).
+
+In Codex, use the worker-capable multi-agent tool exposed in the active session
+(see [codex-tools.md](../using-superpowers/references/codex-tools.md)). Wait for
+the reviewer result and close the finished subagent after handling it.
+
+If no worker-capable multi-agent tool is available, do not claim independent
+review was performed. Stop and tell your human partner which review path is
+blocked. Ask them to enable Codex multi-agent support or provide another review
+channel before proceeding past Critical or Important work.
 
 **Placeholders:**
-- `{WHAT_WAS_IMPLEMENTED}` - What you just built
+- `{DESCRIPTION}` - Brief summary of what you built
 - `{PLAN_OR_REQUIREMENTS}` - What it should do
 - `{BASE_SHA}` - Starting commit
 - `{HEAD_SHA}` - Ending commit
-- `{DESCRIPTION}` - Brief summary
 
 **3. Act on feedback:**
 - Fix Critical issues immediately
@@ -53,15 +67,14 @@ Read `code-reviewer.md`, fill the placeholders below, then dispatch it with `spa
 
 You: Let me request code review before proceeding.
 
-BASE_SHA=$(git log --oneline | grep "Task 1" | head -1 | awk '{print $1}')
+BASE_SHA=<commit recorded before Task 2 started>
 HEAD_SHA=$(git rev-parse HEAD)
 
-[Read code-reviewer.md, fill placeholders, spawn worker subagent]
-  WHAT_WAS_IMPLEMENTED: Verification and repair functions for conversation index
+[Dispatch code reviewer subagent; in Codex, use the active worker subagent tool]
+  DESCRIPTION: Added verifyIndex() and repairIndex() with 4 issue types
   PLAN_OR_REQUIREMENTS: Task 2 from docs/superpowers/plans/deployment-plan.md
   BASE_SHA: a7981ec
   HEAD_SHA: 3df7661
-  DESCRIPTION: Added verifyIndex() and repairIndex() with 4 issue types
 
 [Subagent returns]:
   Strengths: Clean architecture, real tests
@@ -82,7 +95,7 @@ You: [Fix progress indicators]
 - Fix before moving to next task
 
 **Executing Plans:**
-- Review after each batch (3 tasks)
+- Review after each task or at natural checkpoints
 - Get feedback, apply, continue
 
 **Ad-Hoc Development:**
@@ -102,4 +115,4 @@ You: [Fix progress indicators]
 - Show code/tests that prove it works
 - Request clarification
 
-See template at: requesting-code-review/code-reviewer.md
+See template at: [code-reviewer.md](code-reviewer.md)

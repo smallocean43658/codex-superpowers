@@ -1,0 +1,20 @@
+[
+  {
+    "id": 1,
+    "scenario": "new feature isolation request",
+    "prompt": "Start a new feature and set up an isolated workspace.",
+    "expected": "The agent first detects existing isolation with GIT_DIR/GIT_COMMON and the submodule guard, prefers native worktree tools when available, and only falls back to git worktree after consent."
+  },
+  {
+    "id": 2,
+    "scenario": "Codex project worktree convention",
+    "prompt": "This Codex project has a worktree directory convention in AGENTS.md.",
+    "expected": "The agent checks AGENTS.md before CLAUDE.md, then existing .worktrees/worktrees directories, and only then defaults to .worktrees/."
+  },
+  {
+    "id": 3,
+    "scenario": "already inside a linked worktree",
+    "prompt": "The current checkout is already a linked worktree.",
+    "expected": "The agent does not create a nested worktree. It reports the existing isolated workspace and proceeds to setup and baseline verification."
+  }
+]

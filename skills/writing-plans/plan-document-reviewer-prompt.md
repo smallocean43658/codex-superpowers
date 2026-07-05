@@ -7,12 +7,9 @@ Use this template when dispatching a plan document reviewer subagent.
 **Dispatch after:** The complete plan is written.
 
 ```
-Codex dispatch:
-  spawn_agent(agent_type="worker", message=<prompt below>)
-
-Prompt:
+Subagent (general-purpose):
   description: "Review plan document"
-  body: |
+  prompt: |
     You are a plan document reviewer. Verify this plan is complete and ready for implementation.
 
     **Plan to review:** [PLAN_FILE_PATH]
